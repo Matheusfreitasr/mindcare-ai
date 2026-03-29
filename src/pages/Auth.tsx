@@ -124,7 +124,7 @@ export default function Auth() {
                     className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-[#20b2aa] focus:outline-none focus:ring-[#20b2aa] sm:text-sm"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Maria do Rosário..."
+                    placeholder="Seu nome completo"
                   />
                 </div>
 
