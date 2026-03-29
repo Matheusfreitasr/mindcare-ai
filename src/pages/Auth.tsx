@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Gift, 
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(true);
@@ -20,6 +21,14 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const navigate = useNavigate();
+  const { session } = useAuth();
+
+  // Se o usuário já estiver logado, manda direto para o Dashboard
+  useEffect(() => {
+    if (session) {
+      navigate('/');
+    }
+  }, [session, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,26 +36,34 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        // Lógica de Cadastro no Supabase
-        const { error } = await supabase.auth.signUp({
+        // CADASTRO INSTANTÂNEO (Sem confirmação de e-mail no Supabase)
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { display_name: name }
           }
         });
+        
         if (error) throw error;
-        toast.success('Perfil criado! Verifique seu e-mail ou faça login.');
-        setIsSignUp(false);
+
+        // Se o cadastro retornar sessão (configuração atual), loga na hora
+        if (data?.session) {
+          toast.success('Perfil criado com sucesso! Bem-vindo ao MindCare IA.');
+          navigate('/');
+        } else {
+          toast.success('Cadastro realizado! Agora é só entrar.');
+          setIsSignUp(false);
+        }
       } else {
-        // Lógica de Login
+        // LOGIN PROFISSIONAL
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success('Bem-vindo ao MindCare IA!');
-        navigate('/'); 
+        toast.success('Bem-vindo de volta ao MindCare IA!');
+        navigate('/');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Erro na autenticação.');
+      toast.error(error.message || 'Erro na autenticação. Verifique os dados.');
     } finally {
       setIsLoading(false);
     }
@@ -55,12 +72,12 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-[#f8fafb] flex flex-col md:flex-row font-sans">
       
-      {/* Lado Esquerdo: Banner de Marketing */}
+      {/* Lado Esquerdo: Banner de Impacto Social */}
       <div className="hidden md:flex md:w-1/2 bg-[#20b2aa] p-16 flex-col justify-center text-white space-y-10 relative overflow-hidden">
         <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl" />
         
         <div className="flex items-center gap-4 relative z-10">
-          <img src="/pwa-192x192.png" className="w-14 h-14 brightness-0 invert shadow-lg" alt="Logo MindCare" />
+          <img src="/pwa-192x192.png" className="w-14 h-14 brightness-0 invert shadow-lg" alt="Logo" />
           <h1 className="text-4xl font-black tracking-tighter">MindCare IA</h1>
         </div>
         
@@ -68,8 +85,8 @@ export default function Auth() {
           <h2 className="text-6xl font-black leading-[1.1] tracking-tight">
             Cuide de você, <br /> enquanto cuida <br /> dos outros.
           </h2>
-          <p className="text-xl opacity-90 font-medium leading-relaxed max-w-lg">
-            Gestão de Burnout para Enfermeiros: Nossa IA monitora seu bem-estar e seu hospital te premia por se cuidar.
+          <p className="text-xl opacity-90 font-medium leading-relaxed max-w-lg italic">
+            "A IA monitorando seu bem-estar para prever o cansaço e a gestão te premiando por se cuidar."
           </p>
         </div>
 
@@ -78,21 +95,20 @@ export default function Auth() {
             <Gift size={28} />
             <div>
               <p className="font-bold text-lg leading-none mb-1">Ganhe Recompensas</p>
-              <p className="text-xs opacity-80 font-medium italic">Folgas e bônus por assiduidade.</p>
+              <p className="text-xs opacity-80 font-medium italic">Folgas e bônus por sua assiduidade.</p>
             </div>
           </div>
-          
           <div className="flex items-center gap-5 bg-white/10 p-6 rounded-[2rem] backdrop-blur-xl border border-white/20 shadow-xl">
             <ShieldCheck size={28} />
             <div>
               <p className="font-bold text-lg leading-none mb-1">Segurança e Sigilo</p>
-              <p className="text-xs opacity-80 font-medium italic">Dados protegidos para sua melhoria clínica.</p>
+              <p className="text-xs opacity-80 font-medium italic">Seus dados clínicos são protegidos em São Luís.</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lado Direito: Formulário */}
+      {/* Lado Direito: Formulário de Acesso */}
       <div className="flex-1 flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-md space-y-8 bg-white p-10 md:p-12 rounded-[3rem] shadow-2xl border border-gray-50">
           
