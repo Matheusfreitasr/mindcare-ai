@@ -1,49 +1,65 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { DailyEntry, calculateBurnoutScore, classifyRisk } from '@/lib/burnout';
 
-// Local storage hook for now - will be replaced with Supabase
-const STORAGE_KEY = 'mindcare-entries';
-
 export function useEntries() {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<DailyEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setEntries(JSON.parse(stored));
-      } catch {}
+  const fetchEntries = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('daily_entries')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: true });
+
+    if (!error && data) {
+      setEntries(data.map(d => ({
+        ...d,
+        risk_level: d.risk_level as 'low' | 'moderate' | 'high',
+      })));
     }
-  }, []);
+  }, [user]);
 
-  const saveEntries = useCallback((newEntries: DailyEntry[]) => {
-    setEntries(newEntries);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newEntries));
-  }, []);
+  useEffect(() => {
+    fetchEntries();
+  }, [fetchEntries]);
 
-  const addEntry = useCallback((data: { fatigue: number; stress: number; sleepQuality: number }) => {
+  const addEntry = useCallback(async (data: { fatigue: number; stress: number; sleepQuality: number }) => {
+    if (!user) return null;
     setIsLoading(true);
     const score = calculateBurnoutScore(data.fatigue, data.stress, data.sleepQuality);
-    const entry: DailyEntry = {
-      id: crypto.randomUUID(),
-      user_id: 'local',
-      date: new Date().toISOString().split('T')[0],
-      fatigue: data.fatigue,
-      stress: data.stress,
-      sleep_quality: data.sleepQuality,
-      score,
-      risk_level: classifyRisk(score),
-      created_at: new Date().toISOString(),
-    };
+    const riskLevel = classifyRisk(score);
+    const today = new Date().toISOString().split('T')[0];
 
-    // Replace if same date exists
-    const filtered = entries.filter(e => e.date !== entry.date);
-    const newEntries = [...filtered, entry].sort((a, b) => a.date.localeCompare(b.date));
-    saveEntries(newEntries);
+    const { data: result, error } = await supabase
+      .from('daily_entries')
+      .upsert({
+        user_id: user.id,
+        date: today,
+        fatigue: data.fatigue,
+        stress: data.stress,
+        sleep_quality: data.sleepQuality,
+        score,
+        risk_level: riskLevel,
+      }, { onConflict: 'user_id,date' })
+      .select()
+      .single();
+
+    if (!error && result) {
+      await fetchEntries();
+      setIsLoading(false);
+      return {
+        ...result,
+        risk_level: result.risk_level as 'low' | 'moderate' | 'high',
+      } as DailyEntry;
+    }
     setIsLoading(false);
-    return entry;
-  }, [entries, saveEntries]);
+    return null;
+  }, [user, fetchEntries]);
 
   const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
 
