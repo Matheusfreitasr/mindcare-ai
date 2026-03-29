@@ -5,6 +5,7 @@ import { ScoreChart } from '@/components/ScoreChart';
 import { AlertPanel } from '@/components/AlertPanel';
 import { HistoryPage } from '@/components/HistoryPage';
 import { useEntries } from '@/hooks/useEntries';
+import { ExportButtons } from '@/components/ExportButtons';
 import { useAuth } from '@/hooks/useAuth';
 import { Activity, ClipboardCheck, BarChart3, Clock, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
@@ -68,7 +69,17 @@ const Index = () => {
           <ScoreChart entries={entries} />
         )}
         {tab === 'history' && (
-          <HistoryPage entries={entries} />
+          <div className="space-y-6">
+            <HistoryPage entries={entries} />
+            {/* Bloco de Exportação inserido no final da aba Histórico */}
+            <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
+              <h3 className="text-base font-semibold text-foreground mb-1">Exportar Relatórios</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Baixe os registros consolidados para análise externa ou arquivamento seguro.
+              </p>
+              <ExportButtons entries={entries} />
+            </div>
+          </div>
         )}
       </main>
 
