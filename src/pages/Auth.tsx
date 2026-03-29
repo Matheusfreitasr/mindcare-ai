@@ -1,215 +1,162 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Activity, UserPlus, LogIn } from 'lucide-react';
+import { 
+  Gift, 
+  ShieldCheck, 
+  ArrowRight, 
+  Award, 
+  Loader2, 
+  Mail, 
+  Lock, 
+  User 
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
-  const [isSignUp, setIsSignUp] = useState(true); // Agora começa na tela de Cadastro
+  const [isSignUp, setIsSignUp] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Campos de Conta
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Campos de Perfil
   const [name, setName] = useState('');
-  const [hospital, setHospital] = useState('');
-  const [shift, setShift] = useState('');
-  const [hasOnCall, setHasOnCall] = useState(false);
+  const navigate = useNavigate();
 
-  const hospitaisSaoLuis = [
-    "Hospital Municipal Djalma Marques (Socorrão I)",
-    "Hospital Municipal Dr. Clementino Moura (Socorrão II)",
-    "Hospital Universitário Presidente Dutra (HUUFMA)",
-    "Hospital da Ilha",
-    "Hospital São Domingos",
-    "UDI Hospital",
-    "Santa Casa de Misericórdia",
-    "UPA - Itaqui-Bacanga",
-    "UPA - Araçagy",
-    "UPA - Vinhais",
-    "Outro"
-  ];
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
       if (isSignUp) {
-        if (!name || !hospital || !shift) {
-          toast.error("Preencha todos os campos do perfil.");
-          setIsLoading(false);
-          return;
-        }
-
+        // Lógica de Cadastro no Supabase
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: {
-              display_name: name,
-              hospital: hospital,
-              shift: shift,
-              has_on_call: hasOnCall,
-            }
+            data: { display_name: name }
           }
         });
-        
         if (error) throw error;
-        toast.success('Perfil criado com sucesso! Você já pode acessar.');
+        toast.success('Perfil criado! Verifique seu e-mail ou faça login.');
+        setIsSignUp(false);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        
+        // Lógica de Login
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success('Login realizado com sucesso!');
+        toast.success('Bem-vindo ao MindCare IA!');
+        navigate('/'); 
       }
     } catch (error: any) {
-      toast.error(error.message || 'Ocorreu um erro.');
+      toast.error(error.message || 'Erro na autenticação.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="w-12 h-12 rounded-xl bg-[#20b2aa] flex items-center justify-center shadow-lg">
-            <Activity className="text-white" size={28} />
+    <div className="min-h-screen bg-[#f8fafb] flex flex-col md:flex-row font-sans">
+      
+      {/* Lado Esquerdo: Banner de Marketing */}
+      <div className="hidden md:flex md:w-1/2 bg-[#20b2aa] p-16 flex-col justify-center text-white space-y-10 relative overflow-hidden">
+        <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        
+        <div className="flex items-center gap-4 relative z-10">
+          <img src="/pwa-192x192.png" className="w-14 h-14 brightness-0 invert shadow-lg" alt="Logo MindCare" />
+          <h1 className="text-4xl font-black tracking-tighter">MindCare IA</h1>
+        </div>
+        
+        <div className="space-y-6 relative z-10">
+          <h2 className="text-6xl font-black leading-[1.1] tracking-tight">
+            Cuide de você, <br /> enquanto cuida <br /> dos outros.
+          </h2>
+          <p className="text-xl opacity-90 font-medium leading-relaxed max-w-lg">
+            Gestão de Burnout para Enfermeiros: Nossa IA monitora seu bem-estar e seu hospital te premia por se cuidar.
+          </p>
+        </div>
+
+        <div className="grid gap-6 relative z-10">
+          <div className="flex items-center gap-5 bg-white/10 p-6 rounded-[2rem] backdrop-blur-xl border border-white/20 shadow-xl">
+            <Gift size={28} />
+            <div>
+              <p className="font-bold text-lg leading-none mb-1">Ganhe Recompensas</p>
+              <p className="text-xs opacity-80 font-medium italic">Folgas e bônus por assiduidade.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-5 bg-white/10 p-6 rounded-[2rem] backdrop-blur-xl border border-white/20 shadow-xl">
+            <ShieldCheck size={28} />
+            <div>
+              <p className="font-bold text-lg leading-none mb-1">Segurança e Sigilo</p>
+              <p className="text-xs opacity-80 font-medium italic">Dados protegidos para sua melhoria clínica.</p>
+            </div>
           </div>
         </div>
-        <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-gray-900">
-          MindCare IA
-        </h2>
-        <p className="text-center text-sm text-gray-500 mt-1">
-          Prevenção de Burnout | Enfermeiros São Luís-MA
-        </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl sm:rounded-xl sm:px-10 border border-gray-100">
+      {/* Lado Direito: Formulário */}
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12">
+        <div className="w-full max-w-md space-y-8 bg-white p-10 md:p-12 rounded-[3rem] shadow-2xl border border-gray-50">
           
-          {/* Abas de Navegação */}
-          <div className="flex border-b border-gray-200 mb-6">
-            <button
-              onClick={() => setIsSignUp(true)}
-              className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${isSignUp ? 'border-[#20b2aa] text-[#20b2aa]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          <div className="flex bg-gray-100 p-1.5 rounded-2xl shadow-inner">
+            <button 
+              onClick={() => setIsSignUp(true)} 
+              className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${isSignUp ? 'bg-white shadow-md text-[#20b2aa]' : 'text-gray-400'}`}
             >
-              <UserPlus size={18} />
               Criar Perfil
             </button>
-            <button
-              onClick={() => setIsSignUp(false)}
-              className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${!isSignUp ? 'border-[#20b2aa] text-[#20b2aa]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            <button 
+              onClick={() => setIsSignUp(false)} 
+              className={`flex-1 py-3.5 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${!isSignUp ? 'bg-white shadow-md text-[#20b2aa]' : 'text-gray-400'}`}
             >
-              <LogIn size={18} />
-              Já tenho conta
+              Entrar
             </button>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            
-            {/* Campos exclusivos do Cadastro */}
+          <form onSubmit={handleAuth} className="space-y-6">
             {isSignUp && (
-              <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                  <input
-                    type="text"
-                    required
-                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-[#20b2aa] focus:outline-none focus:ring-[#20b2aa] sm:text-sm"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Seu nome completo"
-                  />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Nome Completo</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                  <input required type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-4 pl-12 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-[#20b2aa]/10 focus:bg-white outline-none font-bold text-gray-700 transition-all" placeholder="Ex: Maria Silva" />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hospital / Unidade de Saúde</label>
-                  <select
-                    required
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 shadow-sm focus:border-[#20b2aa] focus:outline-none focus:ring-[#20b2aa] sm:text-sm bg-white"
-                    value={hospital}
-                    onChange={(e) => setHospital(e.target.value)}
-                  >
-                    <option value="" disabled>Selecione seu local principal...</option>
-                    {hospitaisSaoLuis.map((h) => (
-                      <option key={h} value={h}>{h}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Turno Principal</label>
-                  <select
-                    required
-                    className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 shadow-sm focus:border-[#20b2aa] focus:outline-none focus:ring-[#20b2aa] sm:text-sm bg-white"
-                    value={shift}
-                    onChange={(e) => setShift(e.target.value)}
-                  >
-                    <option value="" disabled>Selecione o turno...</option>
-                    <option value="Manhã">Manhã</option>
-                    <option value="Tarde">Tarde</option>
-                    <option value="Noite">Noite</option>
-                    <option value="Misto/Rodízio">Misto / Rodízio</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <input
-                    id="plantao"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-[#20b2aa] focus:ring-[#20b2aa]"
-                    checked={hasOnCall}
-                    onChange={(e) => setHasOnCall(e.target.checked)}
-                  />
-                  <label htmlFor="plantao" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                    Atualmente realizo plantões extras (12h, 24h, etc)
-                  </label>
-                </div>
-                
-                <hr className="border-gray-200" />
               </div>
             )}
-
-            {/* Campos de Conta (Comuns para Cadastro e Login) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                required
-                className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-[#20b2aa] focus:outline-none focus:ring-[#20b2aa] sm:text-sm"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu.email@exemplo.com"
-              />
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">E-mail Profissional</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-4 pl-12 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-[#20b2aa]/10 focus:bg-white outline-none font-bold text-gray-700 transition-all" placeholder="seu@email.com" />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-              <input
-                type="password"
-                required
-                className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-2.5 placeholder-gray-400 shadow-sm focus:border-[#20b2aa] focus:outline-none focus:ring-[#20b2aa] sm:text-sm"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-              />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Senha</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+                <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-4 pl-12 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-[#20b2aa]/10 focus:bg-white outline-none font-bold text-gray-700 transition-all" placeholder="••••••••" />
+              </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex w-full justify-center rounded-lg bg-[#20b2aa] py-3 px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#1a9089] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#20b2aa] transition-colors disabled:opacity-70 mt-6"
+            <button 
+              disabled={isLoading} 
+              type="submit" 
+              className="w-full bg-[#20b2aa] text-white py-5 rounded-2xl font-black shadow-2xl shadow-[#20b2aa]/30 flex justify-center items-center gap-3 hover:bg-[#1a9089] transition-all active:scale-[0.98] disabled:opacity-70"
             >
-              {isLoading ? 'Aguarde...' : (isSignUp ? 'Salvar Perfil e Criar Conta' : 'Entrar')}
+              {isLoading ? <Loader2 className="animate-spin" /> : (
+                <span className="uppercase tracking-[0.2em]">{isSignUp ? 'Criar Perfil' : 'Acessar Conta'}</span>
+              )}
             </button>
           </form>
 
+          {isSignUp && (
+            <div className="p-5 bg-[#20b2aa]/5 rounded-[2rem] border border-[#20b2aa]/10 flex items-center gap-4">
+              <Award className="text-[#20b2aa]" size={22} />
+              <p className="text-[10px] font-black text-[#20b2aa] uppercase leading-tight tracking-tighter">
+                Entre automaticamente no Programa de Reconhecimento MindCare IA!
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
