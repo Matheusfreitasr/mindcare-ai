@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_entries: {
+        Row: {
+          created_at: string
+          date: string
+          fatigue: number
+          id: string
+          risk_level: string
+          score: number
+          sleep_quality: number
+          stress: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          fatigue: number
+          id?: string
+          risk_level: string
+          score: number
+          sleep_quality: number
+          stress: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          fatigue?: number
+          id?: string
+          risk_level?: string
+          score?: number
+          sleep_quality?: number
+          stress?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
