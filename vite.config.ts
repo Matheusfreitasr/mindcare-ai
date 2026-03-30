@@ -48,8 +48,8 @@ export default defineConfig(({ mode }) => ({
     })
   ].filter(Boolean),
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
-      // Este ajuste garante que o @ aponte para a pasta src no seu PC
       "@": path.resolve(__dirname, "./src"),
     },
   },
