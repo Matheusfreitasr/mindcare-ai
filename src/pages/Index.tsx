@@ -1,110 +1,151 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useEntries } from '@/hooks/useEntries';
+import { useNavigate } from 'react-router-dom';
+import { CheckInForm } from '@/components/CheckInForm';
+import { RiskDisplay } from '@/components/RiskDisplay';
+import { ScoreChart } from '@/components/ScoreChart';
+import { AlertPanel } from '@/components/AlertPanel';
+import { HistoryPage } from '@/components/HistoryPage';
+import { ProfilePage } from '@/components/ProfilePage';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Hospital, Camera, Edit3, Loader2, ShieldCheck, Mail, Target, Phone, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { 
+  LayoutDashboard, 
+  ClipboardCheck, 
+  TrendingUp, 
+  History, 
+  User, 
+  LogOut, 
+  Loader2,
+  Activity
+} from 'lucide-react';
 
-export function ProfilePage() {
+type TabId = 'dashboard' | 'checkin' | 'evolution' | 'history' | 'profile';
+
+export default function Index() {
+  const { user, isLoading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  async function fetchProfile() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data }: any = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      setProfile(data || { display_name: '', hospitals: [], shift: '' });
-    } catch (error) {
-      toast.error("Erro ao carregar perfil.");
-    } finally {
-      setLoading(false);
+    if (!authLoading && !user) {
+      navigate('/auth');
     }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => {
+          if (data) setProfile(data);
+          else {
+            // Fallback: use auth metadata
+            const meta = user.user_metadata;
+            setProfile({
+              display_name: meta?.display_name || '',
+              hospitals: meta?.hospitals || [],
+              shift: meta?.shift || '',
+            });
+          }
+        });
+    }
+  }, [user]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="animate-spin text-primary" size={32} />
+      </div>
+    );
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center p-20"><Loader2 className="animate-spin text-[#20b2aa]"/></div>
-  );
-
-  return (
-    <div className="max-w-2xl mx-auto space-y-8 p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
-      {/* CARD SUPERIOR: IDENTIDADE */}
-      <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-gray-50 flex flex-col items-center gap-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#20b2aa]/5 to-transparent opacity-50"></div>
-        <div className="relative z-10">
-          <div className="w-32 h-32 rounded-[3.5rem] bg-gradient-to-tr from-[#20b2aa] to-[#a0f0ed] p-1 shadow-xl">
-            <div className="w-full h-full rounded-[3.2rem] bg-white overflow-hidden flex items-center justify-center border-4 border-white">
-              <User size={54} className="text-gray-200" />
-            </div>
-          </div>
-          <div className="absolute -bottom-1 -right-1 bg-white p-3 rounded-2xl text-[#20b2aa] shadow-lg border border-gray-100"><Camera size={18}/></div>
-        </div>
-
-        <div className="text-center z-10 space-y-1">
-          <h2 className="text-3xl font-black text-gray-950 tracking-tighter">
-            Olá, <span className="text-[#20b2aa]">{profile?.display_name?.split(' ')[0] || 'Profissional'}!</span>
-          </h2>
-          <div className="flex items-center gap-2 justify-center mt-3 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100/50">
-            <ShieldCheck size={14} className="text-emerald-500" />
-            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Enfermeiro Verificado SLZ</p>
-          </div>
-        </div>
-      </div>
-
-      {/* LISTA DE HOSPITAIS (VÍNCULOS) */}
-      <div className="bg-white p-8 rounded-[3.5rem] shadow-xl border border-gray-50 space-y-6">
-        <div className="flex items-center justify-between ml-2">
-            <div className="flex items-center gap-3">
-                <Hospital size={18} className="text-[#20b2aa]" />
-                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Vínculos de Trabalho</h4>
-            </div>
-            <p className="text-[10px] font-black text-gray-300 uppercase">{profile?.hospitals?.length || 0} Unidades</p>
-        </div>
-        <div className="flex flex-wrap gap-2.5 p-5 bg-gray-50/50 rounded-[2.5rem] border border-gray-100/50">
-          {profile?.hospitals?.length > 0 ? (
-            profile.hospitals.map((h: string) => (
-              <span key={h} className="px-5 py-3 bg-white text-gray-700 rounded-2xl text-[10px] font-black uppercase border border-gray-100 shadow-sm flex items-center gap-2">
-                <Target size={12} className="text-[#20b2aa]/60"/> {h}
-              </span>
-            ))
-          ) : (
-            <p className="text-[10px] text-gray-400 font-extrabold uppercase p-4 text-center w-full">Nenhum hospital vinculado.</p>
-          )}
-        </div>
-      </div>
-
-      {/* DADOS SALVOS */}
-      <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-gray-50 space-y-8 relative">
-        <div className="grid md:grid-cols-2 gap-4">
-            <DataCard icon={Mail} label="Nome Completo" value={profile?.display_name || 'Não informado'} />
-            <DataCard icon={CheckCircle2} label="Turno" value={profile?.shift || 'Noturno'} />
-            <DataCard icon={Phone} label="Emergência" value={profile?.emergency_contact || 'Não cadastrado'} />
-        </div>
-        <button className="w-full bg-[#1a1a1a] text-white py-7 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all">
-          Atualizar Perfil Completo
-        </button>
-      </div>
-    </div>
-  );
+  return <AppShell activeTab={activeTab} setActiveTab={setActiveTab} profile={profile} signOut={signOut} />;
 }
 
-function DataCard({ icon: Icon, label, value }: any) {
+function AppShell({ activeTab, setActiveTab, profile, signOut }: { 
+  activeTab: TabId; 
+  setActiveTab: (t: TabId) => void; 
+  profile: any; 
+  signOut: () => Promise<void>;
+}) {
+  const { entries, latestEntry, addEntry, isLoading } = useEntries();
+
+  const handleCheckin = async (data: { fatigue: number; stress: number; sleepQuality: number }) => {
+    const result = await addEntry(data);
+    if (result) {
+      toast.success('Check-in salvo com sucesso!');
+      setActiveTab('dashboard');
+    } else {
+      toast.error('Erro ao salvar check-in.');
+    }
+  };
+
+  const tabs: { id: TabId; label: string; icon: any }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'checkin', label: 'Check-in', icon: ClipboardCheck },
+    { id: 'evolution', label: 'Evolução', icon: TrendingUp },
+    { id: 'history', label: 'Histórico', icon: History },
+    { id: 'profile', label: 'Perfil', icon: User },
+  ];
+
   return (
-    <div className="flex items-center gap-4 p-5 bg-gray-50/50 rounded-[2rem] border border-gray-100">
-        <div className="p-3 bg-white text-gray-300 rounded-xl shadow-sm border border-gray-100"><Icon size={16} /></div>
-        <div>
-            <p className="text-[9px] font-black text-gray-400 uppercase">{label}</p>
-            <p className="font-bold text-gray-800 text-sm">{value}</p>
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50 px-4 py-3">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Activity className="text-primary" size={22} />
+            <h1 className="font-heading font-extrabold text-lg tracking-tight">MindCare IA</h1>
+          </div>
+          <button onClick={signOut} className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <LogOut size={18} />
+          </button>
         </div>
+      </header>
+
+      {/* Content */}
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        {activeTab === 'dashboard' && (
+          <div className="space-y-4">
+            <RiskDisplay entries={entries} latestEntry={latestEntry} />
+            <AlertPanel profile={profile} entries={entries} />
+          </div>
+        )}
+        {activeTab === 'checkin' && (
+          <CheckInForm onSubmit={handleCheckin} isLoading={isLoading} />
+        )}
+        {activeTab === 'evolution' && (
+          <ScoreChart entries={entries} />
+        )}
+        {activeTab === 'history' && (
+          <HistoryPage entries={entries} />
+        )}
+        {activeTab === 'profile' && (
+          <ProfilePage />
+        )}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-background/90 backdrop-blur-lg border-t border-border/50 z-50">
+        <div className="max-w-2xl mx-auto flex justify-around py-2">
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${
+                activeTab === id 
+                  ? 'text-primary' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon size={20} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
