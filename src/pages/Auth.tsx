@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { User, Mail, Lock, Hospital, Clock, ArrowRight, Loader2, Edit3, Heart, Sparkles, Briefcase } from 'lucide-react';
+import { User, Mail, Lock, Hospital, ArrowRight, Loader2, Edit3, Heart, ShieldCheck, Briefcase } from 'lucide-react';
 
 const HOSPITAIS_SLZ = ["Socorrão I", "Socorrão II", "Hospital UDI", "Hospital São Domingos", "Santa Casa", "HUUFMA", "Carlos Macieira"];
 
@@ -76,15 +76,14 @@ export default function Auth() {
         
         if (error) throw error;
 
-        // GARANTIA MÁXIMA: Tenta salvar na tabela profiles logo após o Auth
         if (data?.user) {
             await supabase.from('profiles').update({
                 display_name: name,
                 work_places: workPlaces
-            }).eq('id', data.user.id);
+            } as any).eq('id', data.user.id);
         }
 
-        toast.success("Perfil MindCare criado com sucesso!");
+        toast.success("Perfil criado! Inicie o seu acompanhamento.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -101,14 +100,15 @@ export default function Auth() {
     <div className="min-h-screen bg-[#f8fafb] flex flex-col md:flex-row font-sans relative overflow-hidden">
       <div className="absolute top-0 left-0 w-[40rem] h-[40rem] bg-[#20b2aa]/5 rounded-full blur-[10rem] -translate-y-1/2 translate-x-1/3" />
       
+      {/* NOVO BANNER: Focado na Gestão Hospitalar */}
       <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-[#20b2aa] to-[#1a9089] p-20 flex-col justify-center text-white relative z-10">
         <div className="relative z-10 space-y-8 animate-in fade-in duration-700">
-          <div className="flex items-center gap-4"><img src="/pwa-192x192.png" alt="Logo" className="w-16 h-16 brightness-0 invert" /><h1 className="text-5xl font-black">MindCare IA</h1></div>
-          <h2 className="text-6xl font-black leading-[1.1]">Cuide de você,<br/>enquanto cuida<br/>dos outros.</h2>
+          <div className="flex items-center gap-4"><img src="/pwa-192x192.png" alt="Logo" className="w-16 h-16 brightness-0 invert" /><h1 className="text-5xl font-black">MindCare</h1></div>
+          <h2 className="text-6xl font-black leading-[1.1]">Prevenção de<br/>Burnout na<br/>Enfermagem.</h2>
           <div className="max-w-md py-6 px-5 bg-white/10 rounded-[2.5rem] border border-white/20 space-y-3 relative overflow-hidden backdrop-blur-md">
-              <Sparkles className="absolute -top-3 -right-3 text-orange-300 animate-pulse" size={40} />
-              <div className="flex items-center gap-2"><Heart className="text-red-300 fill-red-300" size={16} /><p className="text-[11px] font-black uppercase tracking-[0.3em] text-red-100">Dever Cumprido = Recompensa</p></div>
-              <p className="text-lg font-bold italic text-white">"Seu check-in diário acumula pontos e bonificações para sua carreira na rede de saúde de São Luís."</p>
+              <ShieldCheck className="absolute -top-3 -right-3 text-[#a0f0ed] opacity-50" size={60} />
+              <div className="flex items-center gap-2"><Heart className="text-red-300 fill-red-300" size={16} /><p className="text-[11px] font-black uppercase tracking-[0.3em] text-red-100">Acompanhamento Profissional</p></div>
+              <p className="text-lg font-bold italic text-white">"O seu check-in diário permite que a sua unidade de saúde acompanhe de perto o seu bem-estar, prevenindo o esgotamento de forma proativa."</p>
           </div>
         </div>
       </div>

@@ -86,7 +86,6 @@ export function ProfilePage({ profile, setProfile }: any) {
         </div>
         <div className="text-center z-10 space-y-1">
           <h2 className="text-3xl font-black text-gray-900 tracking-tighter">{profile?.display_name || 'Profissional'}</h2>
-          {/* E-mail Omitido para Segurança */}
           <div className="inline-flex items-center gap-2 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100 mt-2">
             <ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Enfermeiro Verificado</p>
           </div>

@@ -1,28 +1,35 @@
 import { AreaChart, Area, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, XAxis } from 'recharts';
 import { TrendingUp, Calendar, AlertCircle } from 'lucide-react';
 
-export function ScoreChart({ entries }: { entries: any[] }) {
-  
-  // SISTEMA DE CURA: Agrupa múltiplos check-ins do mesmo dia e faz a MÉDIA
-  const groupedData: Record<string, { data: string; score: number; count: number }> = {};
-  
-  [...entries].reverse().forEach(entry => {
-      const d = new Date(entry.date);
-      const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-      
-      if (!groupedData[dateStr]) {
-          groupedData[dateStr] = { data: dateStr, score: entry.score, count: 1 };
-      } else {
-          groupedData[dateStr].score += entry.score;
-          groupedData[dateStr].count += 1;
-      }
-  });
-  
-  // Calcula a média exata e arredonda para formar a linha reta
-  const chartData = Object.values(groupedData).map((item) => ({
-      data: item.data,
-      score: Math.round(item.score / item.count)
-  })).slice(-14);
+export function ScoreChart({ entries, isToday }: { entries: any[], isToday?: boolean }) {
+  let chartData = [];
+
+  if (isToday) {
+    // Se for o filtro de Hoje, mostramos cada check-in feito hoje como um ponto no gráfico!
+    chartData = [...entries].reverse().map((entry: any, i: number) => ({
+      data: entry.hospital_name && entry.hospital_name !== 'Geral' ? entry.hospital_name : `Registo ${i + 1}`,
+      score: Math.round(entry.score || 0)
+    }));
+  } else {
+    // Se for outros filtros, agrupa por dia e faz a média
+    const groupedData: Record<string, { data: string; score: number; count: number }> = {};
+    
+    [...entries].reverse().forEach(entry => {
+        const d = new Date(entry.date);
+        const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+        if (!groupedData[dateStr]) {
+            groupedData[dateStr] = { data: dateStr, score: entry.score, count: 1 };
+        } else {
+            groupedData[dateStr].score += entry.score;
+            groupedData[dateStr].count += 1;
+        }
+    });
+    
+    chartData = Object.values(groupedData).map((item) => ({
+        data: item.data,
+        score: Math.round(item.score / item.count)
+    })).slice(-14);
+  }
 
   if (!chartData || chartData.length === 0) {
     return (
@@ -34,13 +41,13 @@ export function ScoreChart({ entries }: { entries: any[] }) {
   }
 
   const averageScore = Math.round(chartData.reduce((acc, curr) => acc + curr.score, 0) / chartData.length);
-  const statusIA = averageScore > 60 ? 'Estável / Bom' : (averageScore > 40 ? 'Atenção' : 'Crítico (Risco)');
+  const statusGeral = averageScore > 60 ? 'Estável / Bom' : (averageScore > 40 ? 'Atenção' : 'Crítico (Risco)');
 
   return (
     <div className="space-y-6 p-4">
       <div className="flex items-center justify-between px-2">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 tracking-tight leading-none">Análise Mental</h3>
+          <h3 className="text-2xl font-black text-gray-900 tracking-tight leading-none">Análise de Saúde</h3>
           <div className="flex items-center gap-2 mt-2"><Calendar size={14} className="text-[#20b2aa]" /><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Período Selecionado</p></div>
         </div>
         <div className="bg-[#20b2aa]/10 p-4 rounded-3xl border border-[#20b2aa]/20"><TrendingUp className="text-[#20b2aa]" size={24} /></div>
@@ -69,8 +76,8 @@ export function ScoreChart({ entries }: { entries: any[] }) {
           <p className="text-2xl font-black text-[#20b2aa] leading-none">{averageScore} <span className="text-[10px]">pts</span></p>
         </div>
         <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
-          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status IA</p>
-          <p className={`text-lg font-black uppercase italic leading-none ${averageScore > 60 ? 'text-emerald-500' : 'text-red-500'}`}>{statusIA}</p>
+          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
+          <p className={`text-lg font-black uppercase italic leading-none ${averageScore > 60 ? 'text-emerald-500' : 'text-red-500'}`}>{statusGeral}</p>
         </div>
       </div>
     </div>
