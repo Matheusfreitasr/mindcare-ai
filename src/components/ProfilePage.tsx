@@ -1,142 +1,81 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Camera, Loader2, Plus, Trash2 } from 'lucide-react';
+import { User, Hospital, Phone, ShieldAlert, Save, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 
-export const ProfilePage = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  
-  const [name, setName] = useState('');
-  const [hospitals, setHospitals] = useState<string[]>([]);
-  const [shift, setShift] = useState('');
-  const [hasOnCall, setHasOnCall] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const HOSPITAIS_SLZ = ["Socorrão I", "Socorrão II", "UDI", "São Domingos", "Santa Casa", "HUUFMA", "Carlos Macieira"];
 
-  const hospitaisSaoLuis = [
-    "Hospital Municipal Djalma Marques (Socorrão I)",
-    "Hospital Municipal Dr. Clementino Moura (Socorrão II)",
-    "Hospital Universitário (HUUFMA)",
-    "Hospital da Ilha",
-    "Hospital São Domingos",
-    "UDI Hospital",
-    "Santa Casa de Misericórdia",
-    "UPA - Itaqui-Bacanga",
-    "UPA - Araçagy",
-    "UPA - Vinhais",
-    "Outro"
-  ];
+export function ProfilePage() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<any>({ display_name: '', hospitals: [], emergency_contact: '', phone: '' });
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserId(user.id);
-          const { data, error } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-          if (error) throw error;
-          
-          const profile = data as any;
-          if (profile) {
-            setName(profile.display_name || '');
-            setHospitals(profile.hospitals && profile.hospitals.length > 0 ? profile.hospitals : ['']);
-            setShift(profile.shift || '');
-            setHasOnCall(profile.has_on_call || false);
-            setAvatarUrl(profile.avatar_url);
-          }
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsFetching(false);
-      }
-    };
     fetchProfile();
   }, []);
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId) return;
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.from('profiles').update({
-        display_name: name,
-        hospitals: hospitals.filter(h => h !== ''), // Remove vazios
-        shift,
-        has_on_call: hasOnCall
-      } as any).eq('user_id', userId);
-      if (error) throw error;
-      toast.success('Perfil atualizado!');
-    } catch (error) {
-      toast.error('Erro ao salvar.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  async function fetchProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
+    if (data) setProfile(data);
+    setLoading(false);
+  }
 
-  const handleAddHospital = () => setHospitals([...hospitals, '']);
-  const handleRemoveHospital = (index: number) => setHospitals(hospitals.filter((_, i) => i !== index));
+  async function handleUpdate() {
+    setSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('profiles').update(profile).eq('id', user?.id);
+    if (!error) toast.success("Dados atualizados!");
+    setSaving(false);
+  }
 
-  if (isFetching) return <div className="p-10 text-center"><Loader2 className="animate-spin inline mr-2"/> Carregando...</div>;
+  if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-[#20b2aa]" /></div>;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-        <form onSubmit={handleUpdate} className="space-y-6">
-          <div className="flex flex-col items-center mb-6">
-             {/* Lógica da foto (Avatar) mantida aqui */}
+    <div className="max-w-3xl mx-auto space-y-8 p-6 animate-in fade-in duration-700">
+      {/* HEADER IDENTIDADE */}
+      <div className="bg-white p-10 rounded-[4rem] shadow-xl border border-gray-50 flex flex-col md:flex-row items-center gap-8">
+        <div className="w-32 h-32 rounded-[3rem] bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center relative">
+          <User size={48} className="text-gray-200" />
+          <button className="absolute -bottom-2 -right-2 bg-[#20b2aa] p-3 rounded-2xl text-white shadow-lg"><Camera size={16}/></button>
+        </div>
+        <div className="flex-1 space-y-4 w-full">
+          <h3 className="text-[10px] font-black text-[#20b2aa] uppercase tracking-[0.3em]">Dados Pessoais</h3>
+          <input value={profile.display_name} onChange={e => setProfile({...profile, display_name: e.target.value})} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-gray-700 border-none outline-none focus:ring-2 focus:ring-[#20b2aa]/10" placeholder="Nome Completo" />
+          <div className="grid grid-cols-2 gap-4">
              <div className="relative">
-                <img src={avatarUrl || '/placeholder-user.png'} className="w-24 h-24 rounded-full border-4 border-[#20b2aa] object-cover" />
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 bg-[#20b2aa] p-2 rounded-full text-white shadow-lg">
-                  <Camera size={16} />
-                </button>
+               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+               <input value={profile.phone} onChange={e => setProfile({...profile, phone: e.target.value})} className="w-full p-4 pl-10 bg-gray-50 rounded-2xl font-bold text-xs" placeholder="Seu Telefone" />
+             </div>
+             <div className="relative">
+               <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 text-red-300" size={14} />
+               <input value={profile.emergency_contact} onChange={e => setProfile({...profile, emergency_contact: e.target.value})} className="w-full p-4 pl-10 bg-gray-50 rounded-2xl font-bold text-xs" placeholder="Ctt Emergência" />
              </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Nome Completo</label>
-            <input value={name} onChange={e => setName(e.target.value)} className="w-full p-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#20b2aa] outline-none" />
-          </div>
-
-          {/* LISTA DE HOSPITAIS */}
-          <div className="space-y-3">
-            <label className="block text-sm font-bold text-gray-700">Locais de Trabalho (Hospitais)</label>
-            {hospitals.map((h, i) => (
-              <div key={i} className="flex gap-2">
-                <select 
-                  value={h} 
-                  onChange={e => {
-                    const newH = [...hospitals];
-                    newH[i] = e.target.value;
-                    setHospitals(newH);
-                  }}
-                  className="flex-1 p-3 rounded-lg border border-gray-200 bg-white"
-                >
-                  <option value="">Selecione o local...</option>
-                  {hospitaisSaoLuis.map(item => <option key={item} value={item}>{item}</option>)}
-                </select>
-                {hospitals.length > 1 && (
-                  <button type="button" onClick={() => handleRemoveHospital(i)} className="p-3 text-red-500 hover:bg-red-50 rounded-lg">
-                    <Trash2 size={20} />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" onClick={handleAddHospital} className="flex items-center gap-2 text-[#20b2aa] text-sm font-bold hover:underline">
-              <Plus size={16} /> Adicionar outro local
-            </button>
-          </div>
-
-          {/* Turno e Plantão mantidos aqui... */}
-          <button type="submit" disabled={isLoading} className="w-full bg-[#20b2aa] text-white py-4 rounded-xl font-bold shadow-lg hover:bg-[#1a9089] transition-all">
-            {isLoading ? 'Salvando...' : 'Atualizar Perfil Completo'}
-          </button>
-        </form>
+        </div>
       </div>
+
+      {/* GESTÃO DE HOSPITAIS */}
+      <div className="bg-white p-10 rounded-[4rem] shadow-xl border border-gray-50 space-y-6">
+        <div className="flex items-center gap-3">
+          <Hospital className="text-[#20b2aa]" size={20} />
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Rede de Trabalho (São Luís)</h3>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {HOSPITAIS_SLZ.map(h => (
+            <button key={h} onClick={() => {
+              const newList = profile.hospitals?.includes(h) ? profile.hospitals.filter((x:any) => x !== h) : [...(profile.hospitals || []), h];
+              setProfile({...profile, hospitals: newList});
+            }} className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${profile.hospitals?.includes(h) ? 'bg-[#20b2aa] text-white shadow-lg' : 'bg-gray-50 text-gray-400 border border-transparent hover:border-gray-200'}`}>
+              {h}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={handleUpdate} disabled={saving} className="w-full bg-gray-900 text-white py-6 rounded-[2.5rem] font-black shadow-2xl flex justify-center items-center gap-4 active:scale-[0.98] transition-all">
+        {saving ? <Loader2 className="animate-spin"/> : <><Save size={20}/> SALVAR CONFIGURAÇÕES</>}
+      </button>
     </div>
   );
-};
+}

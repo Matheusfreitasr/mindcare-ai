@@ -1,103 +1,110 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useEntries } from '@/hooks/useEntries';
-import { useNavigate } from 'react-router-dom';
-import { 
-  ClipboardCheck, BarChart3, Clock, User, 
-  Loader2, LogOut, LayoutDashboard 
-} from 'lucide-react';
-import { DailyEntryForm } from '@/components/DailyEntryForm';
-import { ScoreChart } from '@/components/ScoreChart';
-import { HistoryPage } from '@/components/HistoryPage';
-import { ExportButtons } from '@/components/ExportButtons';
-import { ProfilePage } from '@/components/ProfilePage';
-import { RiskDisplay } from '@/components/RiskDisplay';
-import { AlertPanel } from '@/components/AlertPanel';
-import { PointsStatement } from '@/components/PointsStatement';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Hospital, Camera, Edit3, Loader2, ShieldCheck, Mail, Target, Phone, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-type Tab = 'dashboard' | 'checkin' | 'chart' | 'history' | 'profile';
+export function ProfilePage() {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-export default function Index() {
-  const { signOut, session, isLoading: authLoading } = useAuth();
-  const { entries, isLoading: entriesLoading } = useEntries();
-  const [tab, setTab] = useState<Tab>('dashboard');
-  const navigate = useNavigate();
-
-  // PROTEÇÃO DE ROTA: Se não houver sessão após o carregamento, vai para o Login
   useEffect(() => {
-    if (!authLoading && !session) {
-      navigate('/auth');
+    fetchProfile();
+  }, []);
+
+  async function fetchProfile() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data }: any = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      setProfile(data || { display_name: '', hospitals: [], shift: '' });
+    } catch (error) {
+      toast.error("Erro ao carregar perfil.");
+    } finally {
+      setLoading(false);
     }
-  }, [session, authLoading, navigate]);
-
-  const allEntries = useMemo(() => {
-    if (!entries) return [];
-    return [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [entries]);
-
-  const latestEntry = allEntries[0] || null;
-
-  if (authLoading || entriesLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafb]">
-        <Loader2 className="animate-spin text-[#20b2aa]" size={40} />
-      </div>
-    );
   }
 
+  if (loading) return (
+    <div className="flex items-center justify-center p-20"><Loader2 className="animate-spin text-[#20b2aa]"/></div>
+  );
+
   return (
-    <div className="min-h-screen bg-[#f8fafb] flex flex-col pb-24 font-sans">
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-4 shadow-sm">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white flex items-center justify-center shadow-lg border border-gray-50">
-              <img src="/pwa-192x192.png" alt="Logo" className="w-9 h-9 object-contain" />
+    <div className="max-w-2xl mx-auto space-y-8 p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* CARD SUPERIOR: IDENTIDADE */}
+      <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-gray-50 flex flex-col items-center gap-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#20b2aa]/5 to-transparent opacity-50"></div>
+        <div className="relative z-10">
+          <div className="w-32 h-32 rounded-[3.5rem] bg-gradient-to-tr from-[#20b2aa] to-[#a0f0ed] p-1 shadow-xl">
+            <div className="w-full h-full rounded-[3.2rem] bg-white overflow-hidden flex items-center justify-center border-4 border-white">
+              <User size={54} className="text-gray-200" />
             </div>
-            <div>
-              <h1 className="font-black text-gray-900 text-xl leading-none">MindCare IA</h1>
-              <p className="text-[10px] text-[#20b2aa] font-black uppercase tracking-[0.15em] mt-1.5">Gestão de Burnout</p>
+          </div>
+          <div className="absolute -bottom-1 -right-1 bg-white p-3 rounded-2xl text-[#20b2aa] shadow-lg border border-gray-100"><Camera size={18}/></div>
+        </div>
+
+        <div className="text-center z-10 space-y-1">
+          <h2 className="text-3xl font-black text-gray-950 tracking-tighter">
+            Olá, <span className="text-[#20b2aa]">{profile?.display_name?.split(' ')[0] || 'Profissional'}!</span>
+          </h2>
+          <div className="flex items-center gap-2 justify-center mt-3 bg-emerald-50 px-4 py-1.5 rounded-full border border-emerald-100/50">
+            <ShieldCheck size={14} className="text-emerald-500" />
+            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Enfermeiro Verificado SLZ</p>
+          </div>
+        </div>
+      </div>
+
+      {/* LISTA DE HOSPITAIS (VÍNCULOS) */}
+      <div className="bg-white p-8 rounded-[3.5rem] shadow-xl border border-gray-50 space-y-6">
+        <div className="flex items-center justify-between ml-2">
+            <div className="flex items-center gap-3">
+                <Hospital size={18} className="text-[#20b2aa]" />
+                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Vínculos de Trabalho</h4>
             </div>
-          </div>
-          <button onClick={() => signOut()} className="p-2.5 rounded-xl text-gray-400 hover:text-red-500 transition-all">
-            <LogOut size={22} />
-          </button>
+            <p className="text-[10px] font-black text-gray-300 uppercase">{profile?.hospitals?.length || 0} Unidades</p>
         </div>
-      </header>
-
-      <main className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-8">
-        {tab === 'dashboard' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <PointsStatement entries={allEntries} />
-            <RiskDisplay entries={allEntries} latestEntry={latestEntry} />
-            {latestEntry && latestEntry.risk_level !== 'low' && <AlertPanel riskLevel={latestEntry.risk_level} />}
-          </div>
-        )}
-        {tab === 'checkin' && <DailyEntryForm />}
-        {tab === 'chart' && <ScoreChart entries={allEntries} />}
-        {tab === 'history' && (
-          <div className="space-y-6">
-            <HistoryPage entries={allEntries} />
-            <ExportButtons entries={allEntries} />
-          </div>
-        )}
-        {tab === 'profile' && <ProfilePage />}
-      </main>
-
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-100 px-4">
-        <div className="max-w-md mx-auto flex justify-around">
-          {[{ key: 'dashboard', icon: LayoutDashboard, label: 'Início' },
-            { key: 'checkin', icon: ClipboardCheck, label: 'Check-in' },
-            { key: 'chart', icon: BarChart3, label: 'Gráfico' },
-            { key: 'history', icon: Clock, label: 'Histórico' },
-            { key: 'profile', icon: User, label: 'Perfil' }].map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key as Tab)} className={`flex-1 flex flex-col items-center py-5 transition-all ${tab === t.key ? 'text-[#20b2aa]' : 'text-gray-300'}`}>
-              <t.icon size={24} />
-              <span className="text-[9px] mt-2 font-black uppercase">{t.label}</span>
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2.5 p-5 bg-gray-50/50 rounded-[2.5rem] border border-gray-100/50">
+          {profile?.hospitals?.length > 0 ? (
+            profile.hospitals.map((h: string) => (
+              <span key={h} className="px-5 py-3 bg-white text-gray-700 rounded-2xl text-[10px] font-black uppercase border border-gray-100 shadow-sm flex items-center gap-2">
+                <Target size={12} className="text-[#20b2aa]/60"/> {h}
+              </span>
+            ))
+          ) : (
+            <p className="text-[10px] text-gray-400 font-extrabold uppercase p-4 text-center w-full">Nenhum hospital vinculado.</p>
+          )}
         </div>
-      </nav>
+      </div>
+
+      {/* DADOS SALVOS */}
+      <div className="bg-white p-10 rounded-[4rem] shadow-2xl border border-gray-50 space-y-8 relative">
+        <div className="grid md:grid-cols-2 gap-4">
+            <DataCard icon={Mail} label="Nome Completo" value={profile?.display_name || 'Não informado'} />
+            <DataCard icon={CheckCircle2} label="Turno" value={profile?.shift || 'Noturno'} />
+            <DataCard icon={Phone} label="Emergência" value={profile?.emergency_contact || 'Não cadastrado'} />
+        </div>
+        <button className="w-full bg-[#1a1a1a] text-white py-7 rounded-full font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all">
+          Atualizar Perfil Completo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DataCard({ icon: Icon, label, value }: any) {
+  return (
+    <div className="flex items-center gap-4 p-5 bg-gray-50/50 rounded-[2rem] border border-gray-100">
+        <div className="p-3 bg-white text-gray-300 rounded-xl shadow-sm border border-gray-100"><Icon size={16} /></div>
+        <div>
+            <p className="text-[9px] font-black text-gray-400 uppercase">{label}</p>
+            <p className="font-bold text-gray-800 text-sm">{value}</p>
+        </div>
     </div>
   );
 }
